@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة ورشة الحلويات والمخزن</title>
+  
+  <!-- FontAwesome للأيقونات -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- ملف التنسيقات الخارجي -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- مؤشر التحميل -->
+<div id="loader" class="loader-overlay">
+  <div style="text-align: center;">
+    <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+    <div style="margin-top: 10px;">جاري المعالجة...</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 1. شاشة تسجيل الدخول -->
+  <div id="view-login" class="view-section view-active">
+    <div class="card" style="max-width: 450px; margin: 60px auto;">
+      <div style="text-align: center; margin-bottom: 25px;">
+        <i class="fa-solid fa-cookie-bite fa-3x" style="color: var(--accent);"></i>
+        <h2 style="margin-top: 10px;">تسجيل الدخول</h2>
+        <p style="color: #64748b;">نظام إدارة ورشة الحلويات والمخزن</p>
+      </div>
+
+      <div class="form-group">
+        <label>اسم المستخدم</label>
+        <input type="text" id="login-user" class="form-control" placeholder="أدخل اسم المستخدم">
+      </div>
+
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="login-pass" class="form-control" placeholder="أدخل كلمة المرور">
+      </div>
+
+      <button class="btn-action" style="width: 100%; margin-top: 10px;" onclick="handleLogin()">
+        <i class="fa-solid fa-right-to-bracket"></i> دخول
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. لوحة التحكم الرئيسية -->
+  <div id="view-dashboard" class="view-section">
+    <div class="header-bar">
+      <div>
+        <h2 style="color: var(--primary); font-size: 22px;">
+          <i class="fa-solid fa-store" style="color: var(--accent);"></i> لوحة التحكم الرئيسية
+        </h2>
+      </div>
+      <div>
+        <span id="user-badge" style="background: var(--success); color: white; padding: 6px 15px; border-radius: 20px; font-size: 14px; margin-left: 10px;"></span>
+        <button class="btn-action btn-secondary" style="padding: 6px 12px; font-size: 14px;" onclick="logout()">
+          <i class="fa-solid fa-power-off"></i> خروج
+        </button>
+      </div>
+    </div>
+
+    <div class="btn-grid">
+      <button class="app-btn btn-p1" onclick="showView('view-add-product')">
+        <i class="fa-solid fa-box-open"></i>
+        إضافة وتعديل المنتجات
+      </button>
+      <button class="app-btn btn-p2" onclick="showView('view-add-customer')">
+        <i class="fa-solid fa-users"></i>
+        إدارة الزبائن والموزعين
+      </button>
+      <button class="app-btn btn-p3" onclick="alert('سيتم إضافتها في المرحلة 4')">
+        <i class="fa-solid fa-truck-ramp-box"></i>
+        وصل جديد وتوزيع الكميات
+      </button>
+      <button class="app-btn btn-p4" onclick="alert('سيتم إضافتها في المرحلة 4')">
+        <i class="fa-solid fa-calculator"></i>
+        جرد الباقي وحساب المباع
+      </button>
+      <button class="app-btn btn-p5" onclick="alert('سيتم إضافتها في المرحلة 5')">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+        متابعة الكريدي والتحصيل
+      </button>
+      <button class="app-btn btn-p6" onclick="loadStockTable()">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        عرض حالة المخزن الحالي
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. واجهة إضافة المنتجات -->
+  <div id="view-add-product" class="view-section">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3><i class="fa-solid fa-plus-circle" style="color: var(--info);"></i> إضافة منتج جديد</h3>
+        <button class="btn-action btn-secondary" onclick="showView('view-dashboard')">
+          <i class="fa-solid fa-arrow-right"></i> رجوع
+        </button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم الحلوى / المنتج</label>
+          <input type="text" id="p-name" class="form-control" placeholder="مثال: طارت شيكولا">
+        </div>
+        <div class="form-group">
+          <label>الكمية الابتدائية</label>
+          <input type="number" id="p-qty" class="form-control" value="0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>سعر الجملة (دج)</label>
+          <input type="number" id="p-wholesale" class="form-control" value="0">
+        </div>
+        <div class="form-group">
+          <label>سعر التجزئة (دج)</label>
+          <input type="number" id="p-retail" class="form-control" value="0">
+        </div>
+      </div>
+
+      <div style="text-align: left; margin-top: 15px;">
+        <button class="btn-action" onclick="submitProduct()">
+          <i class="fa-solid fa-save"></i> حفظ في النظام
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. واجهة إضافة الزبائن -->
+  <div id="view-add-customer" class="view-section">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3><i class="fa-solid fa-user-plus" style="color: var(--success);"></i> إضافة زبون / موزع جديد</h3>
+        <button class="btn-action btn-secondary" onclick="showView('view-dashboard')">
+          <i class="fa-solid fa-arrow-right"></i> رجوع
+        </button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>اسم الزبون أو الموزع</label>
+          <input type="text" id="c-name" class="form-control" placeholder="أدخل اسم الزبون">
+        </div>
+        <div class="form-group">
+          <label>الكريدي القديم (دج)</label>
+          <input type="number" id="c-credit" class="form-control" value="0">
+        </div>
+      </div>
+
+      <div style="text-align: left; margin-top: 15px;">
+        <button class="btn-action" style="background: var(--success);" onclick="submitCustomer()">
+          <i class="fa-solid fa-save"></i> تسجيل الزبون
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. جدول عرض المخزون -->
+  <div id="view-stock-table" class="view-section">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3><i class="fa-solid fa-warehouse" style="color: var(--secondary);"></i> حالة المخزون الحالية</h3>
+        <button class="btn-action btn-secondary" onclick="showView('view-dashboard')">
+          <i class="fa-solid fa-arrow-right"></i> رجوع
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>الرقم</th>
+              <th>اسم المنتج</th>
+              <th>سعر الجملة</th>
+              <th>سعر التجزئة</th>
+              <th>الكمية المتوفرة</th>
+            </tr>
+          </thead>
+          <tbody id="stock-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ملف الجافاسكريبت الخارجي -->
+<script src="app.js"></script>
+</body>
+</html>
