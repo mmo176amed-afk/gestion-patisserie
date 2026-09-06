@@ -91,47 +91,48 @@
       </button>
     </div>
   </div>
-
-  <!-- 3. واجهة إضافة المنتجات -->
+<!-- 3. واجهة إضافة وتعديل المنتجات -->
   <div id="view-add-product" class="view-section">
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3><i class="fa-solid fa-plus-circle" style="color: var(--info);"></i> إضافة منتج جديد</h3>
+        <h3><i class="fa-solid fa-box-open" style="color: var(--info);"></i> إضافة وتعديل المنتجات</h3>
         <button class="btn-action btn-secondary" onclick="showView('view-dashboard')">
           <i class="fa-solid fa-arrow-right"></i> رجوع
         </button>
       </div>
 
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group" style="position: relative;">
           <label>اسم الحلوى / المنتج</label>
-          <input type="text" id="p-name" class="form-control" placeholder="مثال: طارت شيكولا">
+          <input type="text" id="p-name" class="form-control" list="products-datalist" placeholder="اكتب اسم المنتج للبحث أو الإضافة..." oninput="checkProductExists(this.value)">
+          <datalist id="products-datalist"></datalist>
+          <small id="product-status-msg" style="display: block; margin-top: 5px; font-weight: bold;"></small>
         </div>
         <div class="form-group">
-          <label>الكمية الابتدائية</label>
-          <input type="number" id="p-qty" class="form-control" value="0">
+          <label>الكمية المنتجة / الابتدائية</label>
+          <input type="number" id="p-qty" class="form-control" placeholder="0">
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>سعر الجملة (دج)</label>
-          <input type="number" id="p-wholesale" class="form-control" value="0">
+          <input type="number" id="p-wholesale" class="form-control" placeholder="0">
         </div>
         <div class="form-group">
           <label>سعر التجزئة (دج)</label>
-          <input type="number" id="p-retail" class="form-control" value="0">
+          <input type="number" id="p-retail" class="form-control" placeholder="0">
         </div>
       </div>
 
       <div style="text-align: left; margin-top: 15px;">
-        <button class="btn-action" onclick="submitProduct()">
-          <i class="fa-solid fa-save"></i> حفظ في النظام
+        <button id="btn-save-prod" class="btn-action" onclick="submitProduct()">
+          <i class="fa-solid fa-save"></i> حفظ المنتج
         </button>
       </div>
     </div>
   </div>
-
+ 
   <!-- 4. واجهة إضافة الزبائن -->
   <div id="view-add-customer" class="view-section">
     <div class="card">
