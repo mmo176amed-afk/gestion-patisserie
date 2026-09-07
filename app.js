@@ -1,5 +1,5 @@
 /**
- * نظام إدارة ورشة الحلويات والمخزن - النسخة المحسنة
+ * نظام إدارة ورشة الحلويات والمخزن
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpODYGke1q7kT0ddetFt3nVBLQwbQyKehzOjk6JykK4m5PttecHpl3bn6hBqbn3bI/exec";
@@ -18,7 +18,6 @@ function showView(viewId) {
   const target = document.getElementById(viewId);
   if (target) target.classList.add('view-active');
 
-  // إذا فتحنا واجهة المنتجات، نحدث قائمة الاقتراحات التلقائية
   if (viewId === 'view-add-product') {
     populateProductDatalist();
   }
@@ -78,9 +77,6 @@ function logout() {
   showView('view-login');
 }
 
-/**
- * تغذية قائمة البحث التلقائي بالمنتجات
- */
 function populateProductDatalist() {
   const datalist = document.getElementById('products-datalist');
   if (!datalist) return;
@@ -92,9 +88,6 @@ function populateProductDatalist() {
   });
 }
 
-/**
- * فحص الإكمال التلقائي والتنبيه في حال كان المنتج مسجلاً مسبقاً
- */
 function checkProductExists(val) {
   const name = val.trim();
   const statusMsg = document.getElementById('product-status-msg');
@@ -110,10 +103,10 @@ function checkProductExists(val) {
   const found = productsCache.find(p => p.name.toLowerCase() === name.toLowerCase());
   if (found) {
     statusMsg.style.color = '#e67e22';
-    statusMsg.innerHTML = `<i class="fa-solid fa-circle-info"></i> هذا المنتج مسجل مسبقاً (المتوفر: ${found.currentStock}). سيتم تحديث الكمية أو الأسعار له.`;
-    if (!wholesaleInput.value) wholesaleInput.value = found.wholesalePrice;
-    if (!retailInput.value) retailInput.value = found.retailPrice;
-    btnSave.innerHTML = '<i class="fa-solid fa-sync"></i> تحديث / إضافة كمية للمنتج';
+    statusMsg.innerHTML = `<i class="fa-solid fa-circle-info"></i> هذا المنتج مسجل مسبقاً (المتوفر: ${found.currentStock}).`;
+    wholesaleInput.value = found.wholesalePrice;
+    retailInput.value = found.retailPrice;
+    btnSave.innerHTML = '<i class="fa-solid fa-sync"></i> تعديل بيانات المنتج';
   } else {
     statusMsg.style.color = '#27ae60';
     statusMsg.innerHTML = `<i class="fa-solid fa-check"></i> منتج جديد سيتم إنشاؤه في كافة الجداول`;
@@ -171,6 +164,140 @@ async function submitCustomer() {
   }
 }
 
+// ----------------------------------------------------
+// واجهة الوصل والعمليات على المنتجات
+// ----------------------------------------------------
+
+async function openInvoiceView() {
+  await preloadData();
+
+  // تعيين تاريخ اليوم كقيمة افتراضية
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('inv-date').value = today;
+  document.getElementById('inv-num').value = '';
+  document.getElementById('inv-credit').value = '0';
+
+  // تعبئة قائمة الزبائن
+  const custSelect = document.getElementById('inv-customer');
+  custSelect.innerHTML = '<option value="">-- اختر الزبون --</option>';
+  customersCache.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.innerText = c.name;
+    custSelect.appendChild(opt);
+  });
+
+  // تفريغ أسطر المنتجات والبدء بـ 3 أسطر افتراضية
+  const container = document.getElementById('invoice-items-container');
+  container.innerHTML = '';
+  addInvoiceItemRow();
+  addInvoiceItemRow();
+  addInvoiceItemRow();
+
+  showView('view-invoice-ops');
+}
+
+function onCustomerSelect(customerName) {
+  const found = customersCache.find(c => c.name === customerName);
+  document.getElementById('inv-credit').value = found ? Number(found.oldCredit).toLocaleString() + ' دج' : '0 دج';
+}
+
+function addInvoiceItemRow() {
+  const container = document.getElementById('invoice-items-container');
+  const rowId = 'item-row-' + Date.now() + '-' + Math.floor(Math.random() * 100);
+
+  let optionsHtml = '<option value="">-- اختر الحلوى --</option>';
+  productsCache.forEach(p => {
+    optionsHtml += `<option value="${p.name}" data-price="${p.wholesalePrice}" data-stock="${p.currentStock}">${p.name}</option>`;
+  });
+
+  const rowDiv = document.createElement('div');
+  rowDiv.id = rowId;
+  rowDiv.style = "display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 40px; gap: 10px; align-items: center; margin-bottom: 10px; background: #fdfefe; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;";
+
+  rowDiv.innerHTML = `
+    <div>
+      <select class="form-control item-select" onchange="onItemRowSelect('${rowId}', this)">
+        ${optionsHtml}
+      </select>
+    </div>
+    <div>
+      <span class="item-stock-badge" style="color: #e74c3c; font-size: 13px; font-weight: bold;">مخزن: 0</span>
+    </div>
+    <div>
+      <input type="number" class="form-control item-price" placeholder="السعر" style="font-weight: bold;">
+    </div>
+    <div>
+      <input type="number" class="form-control item-qty" placeholder="الكمية" style="font-weight: bold;">
+    </div>
+    <div>
+      <button class="btn-action btn-secondary" style="padding: 6px 10px; background: #e74c3c;" onclick="removeInvoiceItemRow('${rowId}')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  `;
+
+  container.appendChild(rowDiv);
+}
+
+function onItemRowSelect(rowId, selectEl) {
+  const row = document.getElementById(rowId);
+  const selectedOpt = selectEl.options[selectEl.selectedIndex];
+  const stock = selectedOpt.getAttribute('data-stock') || 0;
+  const price = selectedOpt.getAttribute('data-price') || 0;
+
+  row.querySelector('.item-stock-badge').innerText = `مخزن: ${stock}`;
+  row.querySelector('.item-price').value = price > 0 ? price : '';
+}
+
+function removeInvoiceItemRow(rowId) {
+  const row = document.getElementById(rowId);
+  if (row) row.remove();
+}
+
+async function submitInvoiceOp(type) {
+  const date = document.getElementById('inv-date').value;
+  const receipt = document.getElementById('inv-num').value.trim();
+  const customer = document.getElementById('inv-customer').value;
+
+  if (type === 'distribution' && !customer) {
+    showAlert("يرجى اختيار الزبون أولاً لعملية التوزيع!");
+    return;
+  }
+
+  const items = [];
+  document.querySelectorAll('#invoice-items-container > div').forEach(row => {
+    const select = row.querySelector('.item-select');
+    const pName = select.value;
+    const qty = Number(row.querySelector('.item-qty').value) || 0;
+    const price = Number(row.querySelector('.item-price').value) || 0;
+
+    if (pName && qty > 0) {
+      items.push({ name: pName, qty: qty, price: price });
+    }
+  });
+
+  if (items.length === 0) {
+    showAlert("يرجى تحديد منتج واحد على الأقل مع كتابة الكمية!");
+    return;
+  }
+
+  const payload = {
+    type: type,
+    date: date,
+    customer: customer,
+    receipt: receipt,
+    items: items
+  };
+
+  const res = await apiCall('saveInvoiceOperation', { data: payload });
+  if (res && res.success) {
+    showAlert(res.message);
+    await preloadData();
+    showView('view-dashboard');
+  }
+}
+
 async function loadStockTable() {
   const data = await apiCall('getProducts');
   if (!data) return;
@@ -204,10 +331,7 @@ async function preloadData() {
       apiCall('getProducts'),
       apiCall('getCustomers')
     ]);
-    if (products) {
-      productsCache = products;
-      populateProductDatalist();
-    }
+    if (products) productsCache = products;
     if (customers) customersCache = customers;
   } catch (e) {
     console.error("Error preloading:", e);
