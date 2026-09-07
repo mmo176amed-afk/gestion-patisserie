@@ -237,23 +237,47 @@ async function openInvoiceView() {
   showView('view-invoice-ops');
 }
 
+// =========================================================================
+// عند اختيار زبون: جلب الكريدي وتوليد رقم الوصل التسلسلي المركب (2026 + رقم الزبون + رقم الفاتورة)
+// =========================================================================
 function onCustomerSelect(customerName) {
-  const found = customersCache.find(c => c.name === customerName);
   const creditInput = document.getElementById('inv-credit');
   const receiptInput = document.getElementById('inv-num');
 
-  if (found) {
-    // 1. إظهار قيمة الكريدي القديم
-    creditInput.value = Number(found.oldCredit).toLocaleString() + ' دج';
-    // 2. تعبئة رقم الفاتورة التلقائي (مثال: 2026001002)
+  if (!customerName) {
+    creditInput.value = '0 دج';
+    if (receiptInput) receiptInput.value = '';
+    return;
+  }
+
+  // 1. البحث عن موقع وترتيب الزبون في القائمة
+  const custIndex = customersCache.findIndex(c => c.name === customerName);
+  const found = customersCache[custIndex];
+
+  if (found && custIndex !== -1) {
+    // 2. إظهار الكريدي القديم
+    creditInput.value = Number(found.oldCredit || 0).toLocaleString() + ' دج';
+
+    // 3. استخراج السنة الحالية (2026)
+    const currentYear = new Date().getFullYear();
+
+    // 4. تسلسل الزبون من 3 أرقام (الزبون الأول 001، الثالث 003، وهكذا)
+    const customerCode = String(custIndex + 1).padStart(3, '0');
+
+    // 5. رقم الفاتورة التسلسلي الخاص بالزبون (001 كافتراضي إذا لم تكن هناك فواتير سابقة)
+    let invoiceSeq = "001";
+    if (found.nextInvoiceNumber && found.nextInvoiceNumber.length >= 10) {
+      invoiceSeq = found.nextInvoiceNumber.slice(-3);
+    }
+
+    // 6. تركيب وتعبئة رقم الوصل المركب (مثال: 2026001001)
+    const fullInvoiceNum = `${currentYear}${customerCode}${invoiceSeq}`;
     if (receiptInput) {
-      receiptInput.value = found.nextInvoiceNumber || '';
+      receiptInput.value = fullInvoiceNum;
     }
   } else {
     creditInput.value = '0 دج';
-    if (receiptInput) {
-      receiptInput.value = '';
-    }
+    if (receiptInput) receiptInput.value = '';
   }
 }
 function getSelectedProductsList(excludeRowId = null) {
