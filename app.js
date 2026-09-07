@@ -1,18 +1,28 @@
 /**
- * نظام إدارة ورشة الحلويات والمخزن - النسخة الشاملة
+ * =========================================================================
+ * نظام إدارة ورشة الحلويات والمخزن - ملف المعالجة البرمجية الكامل (app.js)
+ * =========================================================================
  */
 
+// الرابط الخاص بتطبيق Google Apps Script المنشور
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpODYGke1q7kT0ddetFt3nVBLQwbQyKehzOjk6JykK4m5PttecHpl3bn6hBqbn3bI/exec";
 
+// متغيرات الذاكرة المؤقتة للبيانات والمستخدم الحالي
 let currentUser = null;
 let productsCache = [];
 let customersCache = [];
 
+// =========================================================================
+// [1] دوال عامة: مؤشر التحميل، التنبيهات، والتنقل بين الشاشات
+// =========================================================================
+
+// إظهار أو إخفاء مؤشر التحميل (Spinner)
 function showLoader(show) {
   const loader = document.getElementById('loader');
   if (loader) loader.style.display = show ? 'flex' : 'none';
 }
 
+// التبديل بين شاشات التطبيق
 function showView(viewId) {
   document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active'));
   const target = document.getElementById(viewId);
@@ -23,10 +33,17 @@ function showView(viewId) {
   }
 }
 
+// دالة الرجوع المباشر للوحة التحكم الرئيسية
+function showDashboard() {
+  showView('view-dashboard');
+}
+
+// عرض رسائل التنبيه
 function showAlert(message) {
   alert(message);
 }
 
+// دالة موحدة للتواصل مع Google Apps Script عبر GET
 async function apiCall(action, params = {}) {
   showLoader(true);
   try {
@@ -48,6 +65,10 @@ async function apiCall(action, params = {}) {
     return null;
   }
 }
+
+// =========================================================================
+// [2] نظام تسجيل الدخول والخروج والتحميل الأولي
+// =========================================================================
 
 async function handleLogin() {
   const user = document.getElementById('login-user').value.trim();
@@ -76,6 +97,24 @@ function logout() {
   document.getElementById('login-pass').value = '';
   showView('view-login');
 }
+
+// تحميل المنتجات والزبائن للذاكرة المؤقتة
+async function preloadData() {
+  try {
+    const [products, customers] = await Promise.all([
+      apiCall('getProducts'),
+      apiCall('getCustomers')
+    ]);
+    if (products) productsCache = products;
+    if (customers) customersCache = customers;
+  } catch (e) {
+    console.error("Error preloading:", e);
+  }
+}
+
+// =========================================================================
+// [3] إدارة المنتجات (إضافة / تعديل / التحقق)
+// =========================================================================
 
 function populateProductDatalist() {
   const datalist = document.getElementById('products-datalist');
@@ -145,6 +184,10 @@ async function submitProduct() {
   }
 }
 
+// =========================================================================
+// [4] إدارة الزبائن والموزعين
+// =========================================================================
+
 async function submitCustomer() {
   const name = document.getElementById('c-name').value.trim();
   const credit = Number(document.getElementById('c-credit').value) || 0;
@@ -164,9 +207,9 @@ async function submitCustomer() {
   }
 }
 
-// ----------------------------------------------------
-// واجهة الوصل والعمليات مع منع تكرار المنتجات
-// ----------------------------------------------------
+// =========================================================================
+// [5] واجهة الوصل والعمليات المتنوعة (مع منع تكرار السلع في الأسطر)
+// =========================================================================
 
 async function openInvoiceView() {
   await preloadData();
@@ -349,9 +392,9 @@ async function submitInvoiceOp(type) {
   }
 }
 
-// ----------------------------------------------------
-// واجهة جرد الباقي وحساب المباع
-// ----------------------------------------------------
+// =========================================================================
+// [6] واجهة جرد الباقي وحساب المباع
+// =========================================================================
 
 async function openInventoryView() {
   await preloadData();
@@ -452,9 +495,104 @@ async function submitInventoryAndSales() {
   }
 }
 
-// ----------------------------------------------------
-// عرض المخزون والتحميل الأولي
-// ----------------------------------------------------
+// =========================================================================
+// [7] إدارة وحساب تكلفة الإنتاج وبناء الجدول الديناميكي (القسم الجديد)
+// =========================================================================
+
+// تهيئة وفتح شاشة حساب تكلفة الإنتاج
+function showProductionCostView() {
+  document.getElementById('cost-product-name').value = '';
+  document.getElementById('pkg-total').value = '';
+  document.getElementById('pkg-rem').value = '';
+  document.getElementById('pkg-price').value = '';
+
+  const container = document.getElementById('cost-ingredients-container');
+  container.innerHTML = '';
+  
+  // إضافة 3 أسطر للمكونات كبداية افتراضية
+  addIngredientRow();
+  addIngredientRow();
+  addIngredientRow();
+
+  showView('view-cost-calculation');
+}
+
+// إضافة سطر مكون ديناميكي جديد
+function addIngredientRow() {
+  const container = document.getElementById('cost-ingredients-container');
+  const row = document.createElement('div');
+  row.className = 'cost-row';
+  row.style = 'display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 40px; gap: 10px; margin-bottom: 10px; align-items: center;';
+  
+  row.innerHTML = `
+    <input type="text" class="form-control ing-name" placeholder="اسم المكون (فرينة، سكر...)">
+    <input type="number" class="form-control ing-total" placeholder="الكمية الكلية" style="text-align: center;">
+    <input type="number" class="form-control ing-rem" placeholder="الباقي" style="text-align: center;">
+    <input type="number" class="form-control ing-price" placeholder="سعر الوحدة (دج)" style="text-align: center;">
+    <button type="button" class="btn-action" style="background: #e74c3c; height: 38px;" onclick="this.parentElement.remove()">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  `;
+  container.appendChild(row);
+}
+
+// تجميع البيانات وإرسالها لحفظ الجدول في شيت «تكلفة الإنتاج» وإدراج المنتج
+async function submitProductionCost() {
+  const pName = document.getElementById('cost-product-name').value.trim();
+  if (!pName) {
+    showAlert("يرجى كتابة اسم المنتج أولاً!");
+    return;
+  }
+
+  // تجميع المكونات المدخلة
+  const rows = document.querySelectorAll('#cost-ingredients-container .cost-row');
+  const ingredients = [];
+
+  rows.forEach(r => {
+    const name = r.querySelector('.ing-name').value.trim();
+    const totalQty = r.querySelector('.ing-total').value;
+    const remQty = r.querySelector('.ing-rem').value;
+    const unitPrice = r.querySelector('.ing-price').value;
+
+    if (name) {
+      ingredients.push({
+        name: name,
+        totalQty: Number(totalQty) || 0,
+        remQty: Number(remQty) || 0,
+        unitPrice: Number(unitPrice) || 0
+      });
+    }
+  });
+
+  // تجميع بيانات سطر التعليب الإجباري
+  const pkgTotal = document.getElementById('pkg-total').value;
+  const pkgRem = document.getElementById('pkg-rem').value;
+  const pkgPrice = document.getElementById('pkg-price').value;
+
+  const packaging = {
+    totalQty: Number(pkgTotal) || 0,
+    remQty: Number(pkgRem) || 0,
+    unitPrice: Number(pkgPrice) || 0
+  };
+
+  const payload = {
+    productName: pName,
+    ingredients: ingredients,
+    packaging: packaging
+  };
+
+  // إرسال البيانات للواجهة الخلفية
+  const res = await apiCall('saveProductionCost', { data: payload });
+  if (res && res.success) {
+    showAlert(res.message);
+    await preloadData();
+    showView('view-dashboard');
+  }
+}
+
+// =========================================================================
+// [8] عرض حالة المخزن الحالية
+// =========================================================================
 
 async function loadStockTable() {
   const data = await apiCall('getProducts');
@@ -481,17 +619,4 @@ async function loadStockTable() {
     });
   }
   showView('view-stock-table');
-}
-
-async function preloadData() {
-  try {
-    const [products, customers] = await Promise.all([
-      apiCall('getProducts'),
-      apiCall('getCustomers')
-    ]);
-    if (products) productsCache = products;
-    if (customers) customersCache = customers;
-  } catch (e) {
-    console.error("Error preloading:", e);
-  }
 }
