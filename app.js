@@ -1,5 +1,5 @@
 /**
- * نظام إدارة ورشة الحلويات والمخزن
+ * نظام إدارة ورشة الحلويات والمخزن - النسخة الشاملة
  */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpODYGke1q7kT0ddetFt3nVBLQwbQyKehzOjk6JykK4m5PttecHpl3bn6hBqbn3bI/exec";
@@ -165,19 +165,17 @@ async function submitCustomer() {
 }
 
 // ----------------------------------------------------
-// واجهة الوصل والعمليات على المنتجات
+// واجهة الوصل والعمليات مع منع تكرار المنتجات
 // ----------------------------------------------------
 
 async function openInvoiceView() {
   await preloadData();
 
-  // تعيين تاريخ اليوم كقيمة افتراضية
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('inv-date').value = today;
   document.getElementById('inv-num').value = '';
   document.getElementById('inv-credit').value = '0';
 
-  // تعبئة قائمة الزبائن
   const custSelect = document.getElementById('inv-customer');
   custSelect.innerHTML = '<option value="">-- اختر الزبون --</option>';
   customersCache.forEach(c => {
@@ -187,7 +185,6 @@ async function openInvoiceView() {
     custSelect.appendChild(opt);
   });
 
-  // تفريغ أسطر المنتجات والبدء بـ 3 أسطر افتراضية
   const container = document.getElementById('invoice-items-container');
   container.innerHTML = '';
   addInvoiceItemRow();
@@ -202,14 +199,41 @@ function onCustomerSelect(customerName) {
   document.getElementById('inv-credit').value = found ? Number(found.oldCredit).toLocaleString() + ' دج' : '0 دج';
 }
 
+function getSelectedProductsList() {
+  const selected = [];
+  document.querySelectorAll('#invoice-items-container .item-select').forEach(select => {
+    if (select.value) {
+      selected.push(select.value);
+    }
+  });
+  return selected;
+}
+
+function refreshAllItemDropdowns() {
+  const allSelects = document.querySelectorAll('#invoice-items-container .item-select');
+  const selectedList = getSelectedProductsList();
+
+  allSelects.forEach(select => {
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">-- اختر الحلوى --</option>';
+
+    productsCache.forEach(p => {
+      if (p.name === currentVal || !selectedList.includes(p.name)) {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.innerText = p.name;
+        opt.setAttribute('data-price', p.wholesalePrice);
+        opt.setAttribute('data-stock', p.currentStock);
+        if (p.name === currentVal) opt.selected = true;
+        select.appendChild(opt);
+      }
+    });
+  });
+}
+
 function addInvoiceItemRow() {
   const container = document.getElementById('invoice-items-container');
-  const rowId = 'item-row-' + Date.now() + '-' + Math.floor(Math.random() * 100);
-
-  let optionsHtml = '<option value="">-- اختر الحلوى --</option>';
-  productsCache.forEach(p => {
-    optionsHtml += `<option value="${p.name}" data-price="${p.wholesalePrice}" data-stock="${p.currentStock}">${p.name}</option>`;
-  });
+  const rowId = 'item-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
   const rowDiv = document.createElement('div');
   rowDiv.id = rowId;
@@ -218,7 +242,7 @@ function addInvoiceItemRow() {
   rowDiv.innerHTML = `
     <div>
       <select class="form-control item-select" onchange="onItemRowSelect('${rowId}', this)">
-        ${optionsHtml}
+        <option value="">-- اختر الحلوى --</option>
       </select>
     </div>
     <div>
@@ -238,21 +262,34 @@ function addInvoiceItemRow() {
   `;
 
   container.appendChild(rowDiv);
+  refreshAllItemDropdowns();
 }
 
 function onItemRowSelect(rowId, selectEl) {
   const row = document.getElementById(rowId);
   const selectedOpt = selectEl.options[selectEl.selectedIndex];
-  const stock = selectedOpt.getAttribute('data-stock') || 0;
-  const price = selectedOpt.getAttribute('data-price') || 0;
+  
+  if (selectEl.value) {
+    const stock = selectedOpt.getAttribute('data-stock') || 0;
+    const price = selectedOpt.getAttribute('data-price') || 0;
 
-  row.querySelector('.item-stock-badge').innerText = `مخزن: ${stock}`;
-  row.querySelector('.item-price').value = price > 0 ? price : '';
+    row.querySelector('.item-stock-badge').innerText = `مخزن: ${stock}`;
+    row.querySelector('.item-price').value = price > 0 ? price : '';
+  } else {
+    row.querySelector('.item-stock-badge').innerText = `مخزن: 0`;
+    row.querySelector('.item-price').value = '';
+    row.querySelector('.item-qty').value = '';
+  }
+
+  refreshAllItemDropdowns();
 }
 
 function removeInvoiceItemRow(rowId) {
   const row = document.getElementById(rowId);
-  if (row) row.remove();
+  if (row) {
+    row.remove();
+    refreshAllItemDropdowns();
+  }
 }
 
 async function submitInvoiceOp(type) {
@@ -298,43 +335,8 @@ async function submitInvoiceOp(type) {
   }
 }
 
-async function loadStockTable() {
-  const data = await apiCall('getProducts');
-  if (!data) return;
-
-  productsCache = data;
-  const tbody = document.getElementById('stock-tbody');
-  if (!tbody) return;
-
-  tbody.innerHTML = '';
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5">لا توجد منتجات مسجلة</td></tr>';
-  } else {
-    data.forEach(p => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${p.id}</td>
-          <td style="font-weight: bold;">${p.name}</td>
-          <td>${Number(p.wholesalePrice).toLocaleString()} دج</td>
-          <td>${Number(p.retailPrice).toLocaleString()} دج</td>
-          <td><strong style="color: var(--success); font-size: 16px;">${p.currentStock}</strong></td>
-        </tr>
-      `;
-    });
-  }
-  showView('view-stock-table');
-}
-
-async function preloadData() {
-  try {
-    const [products, customers] = await Promise.all([
-      apiCall('getProducts'),
-      apiCall('getCustomers')
-    ]);
-    if (products) productsCache = products;
-    if (customers) customersCache = customers;
-    // ----------------------------------------------------
-// دوال جرد الباقي والمباع
+// ----------------------------------------------------
+// واجهة جرد الباقي وحساب المباع
 // ----------------------------------------------------
 
 async function openInventoryView() {
@@ -435,6 +437,46 @@ async function submitInventoryAndSales() {
     showView('view-dashboard');
   }
 }
+
+// ----------------------------------------------------
+// عرض المخزون والتحميل الأولي
+// ----------------------------------------------------
+
+async function loadStockTable() {
+  const data = await apiCall('getProducts');
+  if (!data) return;
+
+  productsCache = data;
+  const tbody = document.getElementById('stock-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5">لا توجد منتجات مسجلة</td></tr>';
+  } else {
+    data.forEach(p => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${p.id}</td>
+          <td style="font-weight: bold;">${p.name}</td>
+          <td>${Number(p.wholesalePrice).toLocaleString()} دج</td>
+          <td>${Number(p.retailPrice).toLocaleString()} دج</td>
+          <td><strong style="color: var(--success); font-size: 16px;">${p.currentStock}</strong></td>
+        </tr>
+      `;
+    });
+  }
+  showView('view-stock-table');
+}
+
+async function preloadData() {
+  try {
+    const [products, customers] = await Promise.all([
+      apiCall('getProducts'),
+      apiCall('getCustomers')
+    ]);
+    if (products) productsCache = products;
+    if (customers) customersCache = customers;
   } catch (e) {
     console.error("Error preloading:", e);
   }
