@@ -239,9 +239,23 @@ async function openInvoiceView() {
 
 function onCustomerSelect(customerName) {
   const found = customersCache.find(c => c.name === customerName);
-  document.getElementById('inv-credit').value = found ? Number(found.oldCredit).toLocaleString() + ' دج' : '0 دج';
-}
+  const creditInput = document.getElementById('inv-credit');
+  const receiptInput = document.getElementById('inv-num');
 
+  if (found) {
+    // 1. إظهار قيمة الكريدي القديم
+    creditInput.value = Number(found.oldCredit).toLocaleString() + ' دج';
+    // 2. تعبئة رقم الفاتورة التلقائي (مثال: 2026001002)
+    if (receiptInput) {
+      receiptInput.value = found.nextInvoiceNumber || '';
+    }
+  } else {
+    creditInput.value = '0 دج';
+    if (receiptInput) {
+      receiptInput.value = '';
+    }
+  }
+}
 function getSelectedProductsList(excludeRowId = null) {
   const selected = [];
   document.querySelectorAll('#invoice-items-container > div').forEach(row => {
