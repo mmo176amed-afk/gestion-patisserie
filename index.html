@@ -5,15 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نظام إدارة ورشة الحلويات والمخزن</title>
   
-  <!-- FontAwesome للأيقونات -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- ملف التنسيقات الخارجي -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- مؤشر التحميل -->
 <div id="loader" class="loader-overlay">
   <div style="text-align: center;">
     <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
@@ -73,15 +69,15 @@
         <i class="fa-solid fa-users"></i>
         إدارة الزبائن والموزعين
       </button>
-      <button class="app-btn btn-p3" onclick="alert('سيتم إضافتها في المرحلة 4')">
+      <button class="app-btn btn-p3" onclick="openInvoiceView()">
         <i class="fa-solid fa-truck-ramp-box"></i>
-        وصل جديد وتوزيع الكميات
+        وصل جديد والعمليات على المنتجات
       </button>
-      <button class="app-btn btn-p4" onclick="alert('سيتم إضافتها في المرحلة 4')">
+      <button class="app-btn btn-p4" onclick="alert('سيتم إضافتها في المرحلة القادمة')">
         <i class="fa-solid fa-calculator"></i>
         جرد الباقي وحساب المباع
       </button>
-      <button class="app-btn btn-p5" onclick="alert('سيتم إضافتها في المرحلة 5')">
+      <button class="app-btn btn-p5" onclick="alert('سيتم إضافتها في المرحلة القادمة')">
         <i class="fa-solid fa-file-invoice-dollar"></i>
         متابعة الكريدي والتحصيل
       </button>
@@ -91,7 +87,8 @@
       </button>
     </div>
   </div>
-<!-- 3. واجهة إضافة وتعديل المنتجات -->
+
+  <!-- 3. واجهة إضافة وتعديل المنتجات -->
   <div id="view-add-product" class="view-section">
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -132,7 +129,7 @@
       </div>
     </div>
   </div>
- 
+
   <!-- 4. واجهة إضافة الزبائن -->
   <div id="view-add-customer" class="view-section">
     <div class="card">
@@ -150,7 +147,7 @@
         </div>
         <div class="form-group">
           <label>الكريدي القديم (دج)</label>
-         <input type="number" id="c-credit" class="form-control" placeholder="0">
+          <input type="number" id="c-credit" class="form-control" placeholder="0">
         </div>
       </div>
 
@@ -162,7 +159,69 @@
     </div>
   </div>
 
-  <!-- 5. جدول عرض المخزون -->
+  <!-- 5. واجهة وصل جديد والعمليات على المنتجات (محدثة بالكامل) -->
+  <div id="view-invoice-ops" class="view-section">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3><i class="fa-solid fa-file-lines" style="color: var(--accent);"></i> وصل جديد والعمليات على المنتجات</h3>
+        <button class="btn-action btn-secondary" onclick="showView('view-dashboard')">
+          <i class="fa-solid fa-arrow-right"></i> رجوع
+        </button>
+      </div>
+
+      <!-- ترويسة الوصل -->
+      <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr; margin-bottom: 15px;">
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="inv-date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>رقم الوصل</label>
+          <input type="text" id="inv-num" class="form-control" placeholder="رقم الوصل">
+        </div>
+        <div class="form-group">
+          <label>اسم الزبون / الموزع</label>
+          <select id="inv-customer" class="form-control" onchange="onCustomerSelect(this.value)">
+            <option value="">-- اختر الزبون --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>قيمة الكريدي (دج)</label>
+          <input type="text" id="inv-credit" class="form-control" readonly style="background: #edf2f7; font-weight: bold; color: var(--danger);">
+        </div>
+      </div>
+
+      <!-- أزرار العمليات الخمسة -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; background: #e2e8f0; padding: 12px; border-radius: 8px;">
+        <button class="btn-action" style="background: #27ae60;" onclick="submitInvoiceOp('distribution')">
+          <i class="fa-solid fa-truck"></i> وصل جديد (توزيع)
+        </button>
+        <button class="btn-action" style="background: #e67e22;" onclick="submitInvoiceOp('produced')">
+          <i class="fa-solid fa-cookie"></i> سلعة منتجة
+        </button>
+        <button class="btn-action" style="background: #3498db;" onclick="submitInvoiceOp('returned')">
+          <i class="fa-solid fa-rotate-left"></i> مسترجعة
+        </button>
+        <button class="btn-action" style="background: #d35400;" onclick="submitInvoiceOp('damaged')">
+          <i class="fa-solid fa-trash-can"></i> تالفة
+        </button>
+        <button class="btn-action" style="background: #c0392b;" onclick="submitInvoiceOp('gifts')">
+          <i class="fa-solid fa-gift"></i> هدايا
+        </button>
+      </div>
+
+      <!-- بنود المنتجات في الوصل -->
+      <div id="invoice-items-container"></div>
+
+      <div style="margin-top: 15px;">
+        <button class="btn-action" style="background: #4b6584;" onclick="addInvoiceItemRow()">
+          <i class="fa-solid fa-plus"></i> إضافة سطر منتج آخر للوصل
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. جدول عرض المخزون -->
   <div id="view-stock-table" class="view-section">
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -191,7 +250,6 @@
 
 </div>
 
-<!-- ملف الجافاسكريبت الخارجي -->
 <script src="app.js"></script>
 </body>
 </html>
