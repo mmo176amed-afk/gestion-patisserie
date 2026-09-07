@@ -73,7 +73,7 @@
         <i class="fa-solid fa-truck-ramp-box"></i>
         وصل جديد والعمليات على المنتجات
       </button>
-      <button class="app-btn btn-p4" onclick="alert('سيتم إضافتها في المرحلة القادمة')">
+      <button class="app-btn btn-p4" onclick="openInventoryView()">
         <i class="fa-solid fa-calculator"></i>
         جرد الباقي وحساب المباع
       </button>
@@ -220,7 +220,59 @@
       </div>
     </div>
   </div>
+<!-- 5.5 واجهة جرد الباقي وحساب المباع -->
+  <div id="view-inventory" class="view-section">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3><i class="fa-solid fa-calculator" style="color: #8e44ad;"></i> جرد الباقي وحساب المباع والفاتورة</h3>
+        <button class="btn-action btn-secondary" onclick="showView('view-dashboard')">
+          <i class="fa-solid fa-arrow-right"></i> رجوع
+        </button>
+      </div>
 
+      <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 15px;">
+        <div class="form-group">
+          <label>التاريخ</label>
+          <input type="date" id="invt-date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>اسم الزبون / الموزع</label>
+          <select id="invt-customer" class="form-control" onchange="loadCustomerDeliveredStock(this.value)">
+            <option value="">-- اختر الزبون --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>إجمالي الفاتورة الحالية (دج)</label>
+          <input type="text" id="invt-total" class="form-control" readonly style="background: #eef2f7; font-size: 18px; font-weight: bold; color: var(--success);" value="0 دج">
+        </div>
+      </div>
+
+      <!-- جدول المنتجات للجرد -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>المنتج</th>
+              <th>الكمية المسلمة</th>
+              <th>الباقي (المرتجع)</th>
+              <th>الكمية المباعة</th>
+              <th>السعر</th>
+              <th>المجموع</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-tbody">
+            <tr><td colspan="6">اختر الزبون أولاً لتحميل السلع المسلمة له</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="text-align: left; margin-top: 20px;">
+        <button class="btn-action" style="background: #8e44ad;" onclick="submitInventoryAndSales()">
+          <i class="fa-solid fa-check-double"></i> تأكيد وحفظ الجرد والفاتورة
+        </button>
+      </div>
+    </div>
+  </div>
   <!-- 6. جدول عرض المخزون -->
   <div id="view-stock-table" class="view-section">
     <div class="card">
