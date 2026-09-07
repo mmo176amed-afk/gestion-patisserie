@@ -199,35 +199,49 @@ function onCustomerSelect(customerName) {
   document.getElementById('inv-credit').value = found ? Number(found.oldCredit).toLocaleString() + ' دج' : '0 دج';
 }
 
-function getSelectedProductsList() {
+function getSelectedProductsList(excludeRowId = null) {
   const selected = [];
-  document.querySelectorAll('#invoice-items-container .item-select').forEach(select => {
-    if (select.value) {
-      selected.push(select.value);
+  document.querySelectorAll('#invoice-items-container > div').forEach(row => {
+    if (row.id !== excludeRowId) {
+      const select = row.querySelector('.item-select');
+      if (select && select.value) {
+        selected.push(select.value);
+      }
     }
   });
   return selected;
 }
 
 function refreshAllItemDropdowns() {
-  const allSelects = document.querySelectorAll('#invoice-items-container .item-select');
-  const selectedList = getSelectedProductsList();
+  document.querySelectorAll('#invoice-items-container > div').forEach(row => {
+    const select = row.querySelector('.item-select');
+    if (!select) return;
 
-  allSelects.forEach(select => {
     const currentVal = select.value;
+    const takenInOtherRows = getSelectedProductsList(row.id);
+
     select.innerHTML = '<option value="">-- اختر الحلوى --</option>';
 
     productsCache.forEach(p => {
-      if (p.name === currentVal || !selectedList.includes(p.name)) {
+      if (!takenInOtherRows.includes(p.name)) {
         const opt = document.createElement('option');
         opt.value = p.name;
         opt.innerText = p.name;
         opt.setAttribute('data-price', p.wholesalePrice);
         opt.setAttribute('data-stock', p.currentStock);
-        if (p.name === currentVal) opt.selected = true;
+        if (p.name === currentVal) {
+          opt.selected = true;
+        }
         select.appendChild(opt);
       }
     });
+
+    if (currentVal && takenInOtherRows.includes(currentVal)) {
+      select.value = '';
+      row.querySelector('.item-stock-badge').innerText = 'مخزن: 0';
+      row.querySelector('.item-price').value = '';
+      row.querySelector('.item-qty').value = '';
+    }
   });
 }
 
@@ -242,7 +256,7 @@ function addInvoiceItemRow() {
   rowDiv.innerHTML = `
     <div>
       <select class="form-control item-select" onchange="onItemRowSelect('${rowId}', this)">
-        <option value="">-- اختر الحلوى --</option>
+        <option value="" selected>-- اختر الحلوى --</option>
       </select>
     </div>
     <div>
